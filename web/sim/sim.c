@@ -144,6 +144,11 @@ EXPORT void sim_pad(uint32_t p,uint32_t velocity) { if(p<16u)host_qput(0,(int32_
 EXPORT void sim_fader(uint32_t f,uint32_t v) { if(f<4u)fm1_in.fader[f]=(uint8_t)(v&127u); }
 EXPORT void sim_wheel(uint32_t w,uint32_t v) { if(w<2u)fm1_in.wheel[w]=(uint16_t)v; }
 EXPORT uint32_t sim_pad_rgb(uint32_t p) { return p<16u?padled_rgb[p]:0u; }
+/* (CANAIS MIDI) what the firmware sends out over USB MIDI: a running count and a ring of the last 4096
+ * messages (status | data1 << 8 | data2 << 16), and the channels lit on the CANAIS pad bank */
+EXPORT uint32_t sim_midi_out_n(void) { return host_mo_n; }
+EXPORT uint32_t sim_midi_out(uint32_t i) { return host_mo[i % 4096u]; }
+EXPORT uint32_t sim_mch_mask(void) { return mch_mask; }
 EXPORT uint32_t sim_track(void) {return seq_trk;}
 EXPORT uint32_t sim_bank(void) {return pf_bank();}
 EXPORT uint32_t sim_favourite(void) {return perf_header_slot();}

@@ -23,7 +23,7 @@ static unsigned mark;
 static void mo_mark(void){mark=host_mo_n;}
 static unsigned mo_count(unsigned kind,uint16_t *chans,unsigned note,unsigned *vel){
     unsigned n=0;if(chans)*chans=0;
-    for(unsigned i=mark;i<host_mo_n;i++){unsigned st=host_mo[i]&0xFF,d1=host_mo[i]>>8&0x7F,d2=host_mo[i]>>16&0x7F;
+    for(unsigned i=mark;i<host_mo_n;i++){uint32_t m=host_mo[i%4096u];unsigned st=m&0xFF,d1=m>>8&0x7F,d2=m>>16&0x7F;
         if((st&0xF0)!=kind||d1!=note)continue;n++;if(chans)*chans|=(uint16_t)(1u<<(st&15));if(vel)*vel=d2;}
     return n;
 }
