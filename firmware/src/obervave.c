@@ -2184,10 +2184,22 @@ static void note_in(uint32_t on, uint32_t note, uint32_t vel)
     }
 }
 
-static uint8_t panel_tx_note[128],panel_tx_ch[128];
+/* (CANAIS MIDI) the keys and pads go out on every channel lit on the CANAIS pad bank (obv_smk.h), up to MCH_MAX at
+ * once; with none lit, on the track's channel as before (MIDI_OUT_CH). A note keeps the channels it started on, so
+ * its note-off reaches exactly those, whatever is lit by then; a channel switched off ends its held notes at once. */
+#define MCH_MAX 8u
+static uint16_t mch_mask;                        /* bit c: channel c+1 lit (not kept through a power-off) */
+static uint16_t mch_out_mask(void){return mch_mask?mch_mask:(uint16_t)(1u<<MIDI_OUT_CH);}
+static uint32_t mch_count(uint16_t m){uint32_t n=0;for(;m;m&=(uint16_t)(m-1u))n++;return n;}
+static void mch_send(uint32_t on,uint16_t m,uint32_t note,uint32_t vel){
+ for(uint32_t c=0;c<16u;c++)if(m>>c&1u)midi_send((on?0x90u:0x80u)|c,note,on?vel:0u);
+}
+static uint8_t panel_tx_note[128];
+static uint16_t panel_tx_mask[128];
 static void panel_midi_send(unsigned on,unsigned raw,unsigned vel){
- if(on){panel_tx_note[raw]=(uint8_t)clampi((int)raw+(BOARD_SMK37?12*panel_octave():0),0,127);panel_tx_ch[raw]=(uint8_t)MIDI_OUT_CH;}
- midi_send((on?0x90u:0x80u)|panel_tx_ch[raw],panel_tx_note[raw],vel);
+ if(on){panel_tx_note[raw]=(uint8_t)clampi((int)raw+(BOARD_SMK37?12*panel_octave():0),0,127);panel_tx_mask[raw]=mch_out_mask();}
+ mch_send(on,panel_tx_mask[raw],panel_tx_note[raw],vel);
+ if(!on)panel_tx_mask[raw]=0;
 }
 static void panel_note_in(uint32_t on,uint32_t note,uint32_t vel){keyboard_physical=1;note_in(on,note,vel);keyboard_physical=0;}
 #if BOARD_SMK37

@@ -233,7 +233,12 @@ static int midi_get(uint8_t *st, uint8_t *d1, uint8_t *d2)
     mq_r++;
     return 1;
 }
-static void midi_send(uint32_t st, uint32_t d1, uint32_t d2) { printf("%6u ms  MIDI out %02X %u %u\n", fm1_ms, st, d1, d2); }
+static uint32_t host_mo[4096], host_mo_n, host_mo_quiet;   /* (CANAIS MIDI) every message sent, for the tests */
+static void midi_send(uint32_t st, uint32_t d1, uint32_t d2)
+{
+    if (host_mo_n < 4096u) host_mo[host_mo_n++] = st | d1 << 8 | d2 << 16;
+    if (!host_mo_quiet) printf("%6u ms  MIDI out %02X %u %u\n", fm1_ms, st, d1, d2);
+}
 
 static void app_audio(int32_t *out, uint32_t n);
 static void app_main(void);

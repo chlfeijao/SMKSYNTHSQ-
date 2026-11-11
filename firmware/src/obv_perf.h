@@ -16,6 +16,7 @@ static pf_slot_t pf_capture[8];
 static void trk_select(uint32_t t);
 static uint16_t smk_dim(uint16_t c, uint32_t k);
 static void pf_redraw(void);
+static void mch_overlay(void);                 /* (CANAIS MIDI) obv_smk.h */
 /* Manual pad ownership is independent of transport/REC and display pages. */
 static uint32_t pf_seq_mode;
 static uint32_t pf_bank(void){return pf_seq_mode?1u:pf_manual_seq;}
@@ -282,7 +283,7 @@ static void pf_bank_poll(uint32_t b,uint32_t rel){
  if(b>>BTN_KNOB_BANK&1u){pf_bank_down=1;pf_bank_t=fm1_ms;pf_bank_held=0;}
  if(pf_bank_down&&(fm1_in.buttons>>BTN_KNOB_BANK&1u)&&fm1_ms-pf_bank_t>=700u&&!pf_bank_held){pf_nav(0);pf_bank_held=1;}
  if(rel>>BTN_KNOB_BANK&1u){
-  if(pf_bank_down&&!pf_bank_held){unsigned next=pf_seq_mode?0u:pf_manual_seq==0?3u:pf_manual_seq==3?2u:pf_manual_seq==2u&&obv_drums_selected()?4u:0u;pf_nav(next);say(next==4u?"PADS DRUM PADS":next==3u?"PADS SPLIT / LAYER":next==2u?"PADS PATTERNS / SAVE":"PADS PERFORMANCE / FAV");}
+  if(pf_bank_down&&!pf_bank_held){unsigned next=pf_seq_mode?0u:pf_manual_seq==0?3u:pf_manual_seq==3?2u:pf_manual_seq==2u?(obv_drums_selected()?4u:5u):pf_manual_seq==4u?5u:0u;pf_nav(next);if(next==5u)mch_overlay();say(next==5u?"PADS CANAIS MIDI":next==4u?"PADS DRUM PADS":next==3u?"PADS SPLIT / LAYER":next==2u?"PADS PATTERNS / SAVE":"PADS PERFORMANCE / FAV");}
   pf_bank_down=0;pf_bank_held=0;
  }
 }

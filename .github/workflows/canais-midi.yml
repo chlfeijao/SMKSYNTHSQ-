@@ -1,0 +1,63 @@
+# SMKSYNTH + CANAIS MIDI: host tests, then the SMK-37 Pro package, built on GitHub (the JieLi toolchain from
+# pkgman.jieliapp.com and the AC79 SDK from gitee.com, as release.yml.disabled does). The package is an UPDATE
+# over an installed SMKSYNTH 1.0.3 (not a first install over M-VAVE's firmware): see CANAIS-MIDI.md.
+# Run: push to the canais-midi branch, or Actions > canais-midi > Run workflow. The .fwsc is the run's artifact.
+name: canais-midi
+
+on:
+  push:
+    branches: ['canais-midi']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Python packages
+        run: python3 -m pip install Pillow
+
+      - name: Host tests (CANAIS MIDI, the pads and controls it touches)
+        run: |
+          sh tests/run_canais_midi_tests.sh
+          sh tests/run_physical_controls_tests.sh
+          sh tests/run_sl1_tests.sh
+
+      - name: JieLi toolchain (pkgman.jieliapp.com)
+        run: sh tools/get_toolchain.sh
+
+      - name: JieLi AC79 SDK (three files of it are placed in the package)
+        run: |
+          for i in 1 2 3; do                     # (gitee.com drops a clone now and then: try again)
+            git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
+                https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK && break
+            rm -rf ~/fw-AC79_AIoT_SDK
+            sleep 20
+          done
+          test -d ~/fw-AC79_AIoT_SDK
+
+      - name: Build the SMK-37 Pro package (update, experimental identity 21001)
+        run: |
+          BOARD=smk37 sh build.sh --voice-hardware --board smk37 --model pro \
+              --experimental-id 21001 --release 1.0.3-ch
+          ls -l build/*.fwsc
+          sha256sum build/*.fwsc | tee build/SHA256SUMS
+
+      - name: Check the package (model, identity)
+        run: python3 tests/smk_pkg_test.py build/obervave-1.0.3-ch-smk37.fwsc 'SMK-37 Pro_21001'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SMKSYNTH-1.0.3-canais-midi
+          path: |
+            build/obervave-1.0.3-ch-smk37.fwsc
+            build/SHA256SUMS
+            CANAIS-MIDI.md

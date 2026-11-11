@@ -1,0 +1,22 @@
+# (CANAIS MIDI) end to end through the real main loop (after the boot screen): KNOB BANK x3 -> CANAIS MIDI,
+# pads 1 8 15 lit, a key goes out on 1 8 15, pad 8 switched off while it is held (note-off on 8 at once),
+# the release on 1 and 15. tests/run_canais_midi_tests.sh checks the MIDI out lines this prints.
+3000 btn 0
+3300 btn 0
+3600 btn 0
+3900 shot
+4000 pad 0 100
+4050 pad 0 0
+4200 pad 7 100
+4250 pad 7 0
+4400 pad 14 100
+4450 pad 14 0
+4600 shot
+4700 vel 90
+4800 keys 0x80
+5000 pad 7 100
+5050 pad 7 0
+5100 shot
+5300 keys 0
+5500 dump
+6000 end

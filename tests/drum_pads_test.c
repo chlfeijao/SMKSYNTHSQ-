@@ -9,8 +9,8 @@ static void tap_bank(void){fm1_ms+=100;fm1_in.buttons=1u<<BTN_KNOB_BANK;pf_bank_
 static void pad(unsigned p,unsigned v){uint32_t dirty=0;host_qput(0,(int32_t)(p<<8|v));smk_pads(48,&dirty);}
 int main(int argc,char**argv){
  engine_init();pf_init();pat_init(&pat);for(unsigned t=0;t<4;t++){trk_load(t,0);set.mix_lvl[t]=100;}set.m_vol=100;set.m_dj=64;set.tempo=120;fx_sync();mix_apply();seq_trk=0;layer=L_NONE;rec=REC_OFF;
- /* ANALOG retains exactly the original three banks. */
- for(unsigned i=0;i<9;i++){tap_bank();assert(pf_bank()==(i%3==0?3u:i%3==1?2u:0u));}
+ /* ANALOG: the original three banks, then CANAIS MIDI (5) before PERFORMANCE again. */
+ for(unsigned i=0;i<12;i++){tap_bank();assert(pf_bank()==(i%4==0?3u:i%4==1?2u:i%4==2?5u:0u));}
  /* Engine choice and every sound-edit page leave pads in their selected bank. */
  obv_drums_choose(0,0);render();render();assert(pf_bank()==0);page=PG_DSOUND;assert(!smk_drums_hits());pad(1,100);pad(1,0);assert(seq_trk==1&&pf_bank()==0);
  seq_trk=0;tap_bank();assert(pf_bank()==3);tap_bank();assert(pf_bank()==2);tap_bank();assert(pf_bank()==4&&pf_page_request==PG_DSOUND+1u);page=PG_DSOUND;
@@ -30,7 +30,7 @@ int main(int argc,char**argv){
  unsigned original=seq_trk;pad(3,110);pad(3,0);assert(seq_trk==original&&pf_bank()==4&&!drum_pad_down[3]);
  rec=REC_OFF;ctl_seq_run=0;layer=L_NONE;draw_header();draw_page();draw_scope();hints_key=~0u;draw_hints();
  if(argc>1){char p[300];snprintf(p,sizeof p,"%s-inactive.ppm",argv[1]);write_ppm_as(p);}
- tap_bank();assert(pf_bank()==0);seq_trk=0;tap_bank();tap_bank();tap_bank();assert(pf_bank()==4);
+ tap_bank();assert(pf_bank()==5);tap_bank();assert(pf_bank()==0);seq_trk=0;tap_bank();tap_bank();tap_bank();assert(pf_bank()==4);
  page=PG_DSOUND;for(unsigned i=0;i<35;i++)render();draw_header();draw_page();draw_scope();hints_key=~0u;draw_hints();
  if(argc>1){char p[300];snprintf(p,sizeof p,"%s-active.ppm",argv[1]);write_ppm_as(p);}
  /* Long bank returns directly to performance and preserves transport state. */
