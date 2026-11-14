@@ -19,10 +19,8 @@ Pad aceso = canal ligado e enviando; apagado = canal sem enviar. Vários ao mesm
 
 - Teclas (as 37, com velocity), pads de bateria (DRUM PADS) e pads tocados ao vivo com REC: note-on e note-off.
 - O **som interno continua tocando** normalmente; a função só muda a saída MIDI.
-- Saída pelo **USB** e pela tomada **TRS MIDI OUT** (3,5 mm, tipo A): a mesma mensagem nas duas, com ou sem USB ligado.
-  Pela TRS o SMK vai direto a uma interface, patchbay ou módulo, sem computador (adaptador TRS tipo A → DIN 5 pinos).
-  A TRS transmite a 31250 baud: um acorde de 4 notas em 8 canais leva ~31 ms do primeiro ao último canal.
-- Pitch bend, mod wheel, pedal e faders não saem por MIDI no SMKSYNTH, nem antes desta função.
+- Saída **somente pelo USB**. Pitch bend, mod wheel, pedal e faders não saem por MIDI no SMKSYNTH, nem antes desta
+  função.
 
 ## Garantias contra notas presas
 
@@ -45,5 +43,4 @@ Este pacote é uma **atualização** sobre o SMKSYNTH 1.0.3 já instalado (prese
 `sh tests/run_canais_midi_tests.sh`: 45 verificações no código real (canais, limite, note-offs, notas seguradas,
 retorno ao canal da parte, pads de bateria, ordem do KNOB BANK, largura dos textos na tela) e um teste de ponta a
 ponta pelo laço principal do firmware. `tests/run_physical_controls_tests.sh` e `tests/run_sl1_tests.sh` continuam
-passando. Ainda **não testado no teclado real**. O driver da TRS (do Skiff 2.5.1) segue o firmware de fábrica
-V016, mas também não foi confirmado num SMK real por nenhum projeto: é o primeiro teste a fazer.
+passando. Ainda **não testado no teclado real**.
