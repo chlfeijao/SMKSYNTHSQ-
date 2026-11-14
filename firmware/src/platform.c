@@ -49,6 +49,7 @@ enum { ENC_SELECT = 0, ENC_ALGORITHM = 1, ENC_KNOB1 = 2, ENC_KNOB2 = 3, ENC_KNOB
 #include "fm1_guard.h"
 #if BOARD_SMK37
 #include "smk_input.h"                          /* keys with velocity, buttons, 8 encoders, LEDs, pads, faders, wheels */
+#include "smk_uart_tx.h"                       /* (CANAIS MIDI) the TRS jack: MIDI OUT (UART1 TX, PC7) */
 static void fm1_led_key_glow(uint32_t id, int on) { (void)id; (void)on; }   /* (no key LEDs: the pads glow) */
 #else
 #define FM1_SETTLE_US 100u                      /* the boot scan (OCT- for the rescue): 10 us read no key on an FM-1, the tick waits 100 too */
@@ -392,6 +393,12 @@ static int midi_get(uint8_t *st, uint8_t *d1, uint8_t *d2)   /* 1: a message (st
 static void midi_send(uint32_t st, uint32_t d1, uint32_t d2)   /* from the main loop only */
 {
     midi_out_event((st >> 4) | st << 8 | (d1 & 0x7Fu) << 16 | (d2 & 0x7Fu) << 24);
+#if BOARD_SMK37
+    /* (CANAIS MIDI) the same message out of the TRS jack (MIDI OUT, type A), with or without USB: the SMK straight
+     * into a MIDI interface, a patchbay or a module. Whole messages only (never a status without its data). */
+    if (smk_uart_tx_room() >= 3u) { smk_uart_tx_put(st); smk_uart_tx_put(d1 & 0x7Fu); smk_uart_tx_put(d2 & 0x7Fu); }
+    else smk_ut_drops++;
+#endif
 }
 
 /* ---- the timer: 10 kHz key scan, milliseconds, USB at 2 kHz. It outranks the audio ISR; nested in a
@@ -403,6 +410,9 @@ void fm1_timer5_irq(void)
     uint32_t t0 = fm1_ticks(), usb_due = sub % 5u == 0u;
     fm1_timer5_ack();
     fm1_input_tick();
+#if BOARD_SMK37
+    smk_uart_tx_tick();                         /* (CANAIS MIDI) the TRS jack: the next byte once the last has gone */
+#endif
     acc += t0 - last;
     last = t0;
     while (acc >= 1000u * FM1_TICKS_PER_US) {
@@ -600,6 +610,9 @@ void fm1_cstart(void)
     usb_start();
 #if FELUCCA_UART
     uart_midi_init();                           /* before TIMER5: PORTH read-modify-write */
+#endif
+#if BOARD_SMK37
+    smk_uart_tx_init();                         /* (CANAIS MIDI) the TRS jack: MIDI OUT (UART1 TX, PC7), before TIMER5 */
 #endif
     fm1_timer5_start(isr_timer5, 4);
     fm1_guard_lock_top();
