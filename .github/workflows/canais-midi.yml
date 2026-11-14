@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   firmware:
@@ -61,3 +61,16 @@ jobs:
             build/obervave-1.0.3-ch-smk37.fwsc
             build/SHA256SUMS
             CANAIS-MIDI.md
+
+      - name: Keep the package on the firmware-builds branch (downloadable with git)
+        if: github.event_name == 'push'
+        run: |
+          sha=$(git rev-parse --short HEAD)
+          mkdir -p /tmp/out && cp build/obervave-1.0.3-ch-smk37.fwsc build/SHA256SUMS CANAIS-MIDI.md /tmp/out/
+          echo "$sha" > /tmp/out/SOURCE_COMMIT
+          git config user.name "github-actions" && git config user.email "github-actions@users.noreply.github.com"
+          git fetch origin firmware-builds:firmware-builds 2>/dev/null || true
+          if git rev-parse -q --verify firmware-builds >/dev/null; then git checkout -q firmware-builds; else git checkout -q --orphan firmware-builds; git rm -rqf . ; fi
+          git clean -fdq
+          cp /tmp/out/* .
+          git add -A && git commit -qm "SMK-37 Pro package from $sha" && git push -q origin firmware-builds
