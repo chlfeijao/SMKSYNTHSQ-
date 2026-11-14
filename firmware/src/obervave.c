@@ -2202,13 +2202,6 @@ static void panel_midi_send(unsigned on,unsigned raw,unsigned vel){
  if(!on)panel_tx_mask[raw]=0;
 }
 static void panel_note_in(uint32_t on,uint32_t note,uint32_t vel){keyboard_physical=1;note_in(on,note,vel);keyboard_physical=0;}
-/* (CANAIS MIDI) controller only: with a channel lit the keys play the modules alone (local off: no internal sound, no
- * arp/chord/REC). Each note remembers whether it reached the engine, so its release does too whatever is lit by then. */
-static uint8_t panel_local[128];
-static void panel_play(uint32_t on,uint32_t raw,uint32_t vel){
- if(on){panel_local[raw]=(uint8_t)!mch_mask;if(panel_local[raw])panel_note_in(1,raw,vel);}
- else if(panel_local[raw]){panel_local[raw]=0;panel_note_in(0,raw,0);}
-}
 #if BOARD_SMK37
 #include "obv_smk.h"                            /* the SMK-37's pads, outer keys, faders, wheels, < >, FADER BANK */
 #else
@@ -2249,7 +2242,7 @@ static void keys_in(uint32_t notes_only)
                 } else if (KEY_PAGE[k] >= 0) pat_copy((uint32_t)KEY_PAGE[k]);
             } else {
                 panel_midi_send(1,held_key[k],KEY_VEL(k));
-                panel_play(1, held_key[k], KEY_VEL(k));
+                panel_note_in(1, held_key[k], KEY_VEL(k));
                 if (notes_shown()) dirty_steps = dirty_page = 1;
                 continue;
             }
@@ -2262,7 +2255,7 @@ static void keys_in(uint32_t notes_only)
             else if (key_step[k] == 1u) seq_key_up(k);
             else if (key_step[k] == 0u) {
                 panel_midi_send(0,held_key[k],0);
-                panel_play(0, held_key[k], 0);
+                panel_note_in(0, held_key[k], 0);
                 if (notes_shown()) dirty_steps = dirty_page = 1;
                 continue;
             }
