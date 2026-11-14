@@ -58,10 +58,10 @@ int main(void){
     CHECK(mch_led(1)!=mch_led(0)&&mch_led(15)!=mch_led(0));
     smk_leds();CHECK(padled_rgb[0]!=padled_rgb[1]&&padled_rgb[7]==padled_rgb[0]);
 
-    /* A key goes out on all three at its velocity, and its release on all three; the local sound still plays. */
+    /* A key goes out on all three at its velocity, and its release on all three; controller only: no internal sound. */
     unsigned q0=nq_w;mo_mark();key(K,77);
     CHECK(mo_count(0x90,&ch,NOTE,&vel)==3&&ch==(CH(1)|CH(8)|CH(15))&&vel==77);
-    CHECK(nq_w!=q0);
+    CHECK(nq_w==q0&&!panel_local[NOTE-12*panel_octave()]);
     mo_mark();key(K,0);CHECK(mo_count(0x80,&ch,NOTE,0)==3&&ch==(CH(1)|CH(8)|CH(15)));
 
     /* A channel switched off while a note is held ends it there at once, and only there; the release then
@@ -92,6 +92,12 @@ int main(void){
     mo_mark();tap(9);CHECK(mo_count(0x80,&ch,60,0)==1&&ch==CH(10)&&mo_count(0x80,0,64,0)==1);
     CHECK(smk_live_mask[2]==CH(2));smk_live[2][0]=smk_live[2][1]=0;smk_live_mask[2]=0;
 
+    /* Controller only, both ways: a note begun with none lit sounds inside, and its release reaches the engine even
+     * with a channel lit by then (no note stuck in the internal sound); with a channel lit the engine hears nothing. */
+    {uint16_t keep=mch_mask;mch_mask=0;unsigned q1=nq_w;key(K,70);CHECK(nq_w!=q1);
+     mch_mask=CH(3);unsigned q2=nq_w;mo_mark();key(K,0);CHECK(nq_w!=q2);CHECK(mo_count(0x80,&ch,NOTE,0)==1&&ch==CH(1));
+     unsigned q3=nq_w;key(K,70);key(K,0);CHECK(nq_w==q3);mch_mask=keep;}
+
     /* Every pad off: back to the track's channel, as before. */
     for(unsigned p=0;p<16;p++)if(mch_mask>>p&1u)tap(p);
     CHECK(mch_mask==0&&mch_out_mask()==CH(1));
@@ -110,7 +116,7 @@ int main(void){
 
     /* The overlay's lines fit the 240-pixel screen, the longest of each kind. */
     CHECK(text_w(&FONT_S,"NENHUM: CANAL 16 DA PARTE")<=232&&text_w(&FONT_S,"9 10 11 12 13 14 15 16")<=232);
-    CHECK(text_w(&FONT_S,"MAXIMO 8 CANAIS")<=232&&text_w(&FONT_S,"PADS CANAIS MIDI")<=232);
+    CHECK(text_w(&FONT_S,"CANAIS MIDI: SO CONTROLE")<=232&&text_w(&FONT_S,"MAXIMO 8 CANAIS")<=232&&text_w(&FONT_S,"PADS CANAIS MIDI")<=232);
     /* A picture of the overlay, to look at (build/host/canais-overlay.ppm). */
     pf_nav(5);page=PG_PERFORM;mch_mask=CH(1)|CH(8)|CH(15);
     for(unsigned i=0;i<20;i++){fm1_ms+=40;app_idle();}

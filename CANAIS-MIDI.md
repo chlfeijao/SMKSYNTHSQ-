@@ -18,7 +18,10 @@ Pad aceso = canal ligado e enviando; apagado = canal sem enviar. Vários ao mesm
 ## O que vai para os canais ligados
 
 - Teclas (as 37, com velocity), pads de bateria (DRUM PADS) e pads tocados ao vivo com REC: note-on e note-off.
-- O **som interno continua tocando** normalmente; a função só muda a saída MIDI.
+- **Só controlador:** com qualquer canal aceso, o SMK não toca o som interno (Local Off): as teclas e os pads vão
+  só para os módulos. Arpejador, CHORD e gravação REC do SMK também ficam fora, porque dependem do som interno.
+  Com todos apagados, o SMK volta a ser o sintetizador normal. Uma nota iniciada com o som interno termina nele
+  mesmo que você acenda um canal antes de soltar a tecla.
 - Saída pelo **USB** e pela tomada **TRS MIDI OUT** (3,5 mm, tipo A): a mesma mensagem nas duas, com ou sem USB ligado.
   Pela TRS o SMK vai direto a uma interface, patchbay ou módulo, sem computador (adaptador TRS tipo A → DIN 5 pinos).
   A TRS transmite a 31250 baud: um acorde de 4 notas em 8 canais leva ~31 ms do primeiro ao último canal.

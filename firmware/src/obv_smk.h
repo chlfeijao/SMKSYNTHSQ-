@@ -32,6 +32,7 @@ static uint32_t smk_bank;                       /* FADER BANK: 0 = A (PERFORM), 
 static uint8_t smk_fad_last[4] = {0xFF, 0xFF, 0xFF, 0xFF};
 static uint8_t smk_live[16][SEQ_CHORD];         /* the notes a pad plays live (REC on): its release ends them */
 static uint16_t smk_live_mask[16];              /* (CANAIS MIDI) the channels a pad's live notes went out on */
+static uint8_t smk_live_local[16];              /* (CANAIS MIDI) its notes reached the internal sound (none lit) */
 static uint8_t smk_ext_note[FM1_NKEY], smk_ext_erase[FM1_NKEY];   /* an outer key's note; 1: it erases (EDIT held) */
 static uint32_t smk_view_prev;
 static const char *smk_ov1;                     /* the overlay under the page (faders, banks, step pages), 1.5 s */
@@ -84,12 +85,12 @@ static void smk_seq_pad_event(int32_t e,uint32_t *dirty)
         uint32_t p = ((uint32_t)e >> 8) & 15u, vel = (uint32_t)e & 0xFFu, k = SMK_WK[p], q;
         if (vel) {
             if (rec) {                              /* REC on: the pad plays the pen chord, recorded as the keys are */
-                smk_live_mask[p] = mch_out_mask();
+                smk_live_mask[p] = mch_out_mask(); smk_live_local[p] = (uint8_t)!mch_mask;
                 for (q = 0; q < SEQ_CHORD; q++) {
                     uint32_t n = q < (pen_n ? pen_n : 1u) ? (pen_n ? pen_chord[q] : pen) : 0u;
                     smk_live[p][q] = (uint8_t)n;
                     if (!n) continue;
-                    play_note(1, n, vel); mch_send(1, smk_live_mask[p], n, vel);
+                    if (smk_live_local[p]) play_note(1, n, vel); mch_send(1, smk_live_mask[p], n, vel);
                     if (rec_keys()) rec_note(1, n, vel);
                 }
             } else {                                /* a step: as its white key in the SEQ layer */
@@ -111,7 +112,7 @@ static void smk_seq_pad_event(int32_t e,uint32_t *dirty)
                 uint32_t n = smk_live[p][q];
                 smk_live[p][q] = 0;
                 if (!n) continue;
-                play_note(0, n, 0); mch_send(0, smk_live_mask[p], n, 0);
+                if (smk_live_local[p]) play_note(0, n, 0); mch_send(0, smk_live_mask[p], n, 0);
                 if (rec_keys()) rec_note(0, n, 0);
                 for (uint32_t u = 0; u < NTRK; u++) ctl_live_hold[u][n >> 5 & 3u] &= ~(1u << (n & 31u));   /* (let go: the sequencer's) */
             }
@@ -122,6 +123,7 @@ static void smk_seq_pad_event(int32_t e,uint32_t *dirty)
 
 static uint8_t drum_pad_part[8],drum_pad_channel[8],drum_pad_down[8];
 static uint16_t drum_pad_mask[8];               /* (CANAIS MIDI) the channels a drum pad's hit went out on */
+static uint8_t drum_pad_local[8];               /* (CANAIS MIDI) the hit reached the internal kit (none lit) */
 static int smk_drums_hits(void){return obv_drums_selected()&&(pf_bank()==4u||(!layer&&pf_bank()==1u&&drum_grid_shown()&&rec));}
 /* Same audio-owned timestamps as ui_drum_hits: reflects live, MIDI and sequence hits. */
 static uint16_t drum_pad_led(uint32_t p){
@@ -141,7 +143,7 @@ static void mch_overlay(void)
     l2[0] = 0;
     for (c = 0; c < 16u; c++) if (mch_mask >> c & 1u) { char b[4]; if (n++) scat(l2, " "); b[0] = 0; fmt_u(b, c + 1u); scat(l2, b); }
     if (!n) { scat(l2, "NENHUM: CANAL "); { char b[4]; b[0] = 0; fmt_u(b, MIDI_OUT_CH + 1u); scat(l2, b); } scat(l2, " DA PARTE"); }
-    smk_overlay("CANAIS MIDI", l2);
+    smk_overlay(n ? "CANAIS MIDI: SO CONTROLE" : "CANAIS MIDI", l2);
 }
 static void mch_release(uint32_t c)               /* channel c switched off: its held notes end now, there only */
 {
@@ -184,9 +186,9 @@ static void smk_pads(uint32_t base, uint32_t *dirty)
         else if(pf_role[p]==3u)pb_event(p,vel);
         else if(pf_role[p]==5u){if(vel){drum_grid_pad(p,vel);dirty_steps=dirty_page=1;}*dirty=1;}
         else if(pf_role[p]==4u){
-            if(vel){drum_pad_part[p]=(uint8_t)seq_trk;drum_pad_channel[p]=(uint8_t)MIDI_OUT_CH;drum_pad_mask[p]=mch_out_mask();drum_pad_down[p]=1;drum_ui_lane[seq_trk]=(uint8_t)p;dirty_page=1;note_event_p(seq_trk,1,DRUM_NOTE[p],vel);rec_note_at(seq_trk,1,DRUM_NOTE[p],vel);mch_send(1,drum_pad_mask[p],DRUM_NOTE[p],vel);}
+            if(vel){drum_pad_part[p]=(uint8_t)seq_trk;drum_pad_channel[p]=(uint8_t)MIDI_OUT_CH;drum_pad_mask[p]=mch_out_mask();drum_pad_local[p]=(uint8_t)!mch_mask;drum_pad_down[p]=1;drum_ui_lane[seq_trk]=(uint8_t)p;dirty_page=1;if(drum_pad_local[p]){note_event_p(seq_trk,1,DRUM_NOTE[p],vel);rec_note_at(seq_trk,1,DRUM_NOTE[p],vel);}mch_send(1,drum_pad_mask[p],DRUM_NOTE[p],vel);}
             else {uint32_t t=drum_pad_part[p],n=DRUM_NOTE[p];drum_pad_down[p]=0;
-                note_event_p(t,0,n,0);rec_note_at(t,0,n,0);ctl_live_hold[t][n>>5]&=~(1u<<(n&31u));
+                if(drum_pad_local[p]){note_event_p(t,0,n,0);rec_note_at(t,0,n,0);}drum_pad_local[p]=0;ctl_live_hold[t][n>>5]&=~(1u<<(n&31u));
                 mch_send(0,drum_pad_mask[p],n,0);drum_pad_mask[p]=0;}
             *dirty=1;
         }
@@ -222,7 +224,7 @@ static void smk_outer(uint32_t base, uint32_t notes_only, uint32_t *dirty)
                 say("ERASED");
             } else {
                 panel_midi_send(1,n,vel);
-                panel_note_in(1, n, vel);
+                panel_play(1, n, vel);
             }
         } else if (smk_ext_note[kk]) {
             uint32_t n = smk_ext_note[kk];
@@ -230,7 +232,7 @@ static void smk_outer(uint32_t base, uint32_t notes_only, uint32_t *dirty)
             if (smk_ext_erase[kk]) erase_on[(uint32_t)clampi((int32_t)n - (obv_drums_selected()?0:pat.trk[seq_trk].transp), 1, 127)] = 0;
             else {
                 panel_midi_send(0,n,0);
-                panel_note_in(0, n, 0);
+                panel_play(0, n, 0);
             }
         }
         if (notes_shown()) *dirty = 1;          /* (a note alone changes no knob page) */
